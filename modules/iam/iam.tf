@@ -30,7 +30,32 @@ resource "aws_iam_role_policy_attachment" "lambda_cloudwatch_attach" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
-
 output "lambda_exec_role_arn" {
   value = aws_iam_role.lambda_exec.arn
+}
+
+resource "aws_iam_role" "api_gateway_cloudwatch_role" {
+  name = "api_gateway_cloudwatch_role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_attach" {
+  role       = aws_iam_role.api_gateway_cloudwatch_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+output "api_gateway_cloudwatch_role_arn" {
+  value = aws_iam_role.api_gateway_cloudwatch_role.arn
 }
