@@ -20,6 +20,11 @@ resource "aws_iam_role_policy_attachment" "lambda_exec_attach" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_iam_role_policy_attachment" "lambda_dynamodb_attach" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+}
+
 output "lambda_exec_role_arn" {
   value = aws_iam_role.lambda_exec.arn
 }
