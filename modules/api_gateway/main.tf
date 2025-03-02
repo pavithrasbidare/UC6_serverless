@@ -28,13 +28,13 @@ resource "aws_api_gateway_integration" "user_integration" {
   http_method             = aws_api_gateway_method.user_method.http_method
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = aws_lambda_function.lambda_function.invoke_arn
+  uri                     = var.lambda_function_invoke_arn
 }
 
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.lambda_function.function_name
+  function_name = var.lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
 }
