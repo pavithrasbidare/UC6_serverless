@@ -1,3 +1,7 @@
+import json
+import boto3
+import uuid
+
 def lambda_handler(event, context):
     table_name = 'UserTable'
     dynamodb = boto3.resource('dynamodb')
@@ -5,17 +9,16 @@ def lambda_handler(event, context):
  
     result = None
     people = [
-            { 'userid' : 'marivera', 'name' : 'Martha Rivera'},
-            { 'userid' : 'nikkwolf', 'name' : 'Nikki Wolf'},
-            { 'userid' : 'pasantos', 'name' : 'Paulo Santos'},
-            { 'userid' : 'Mani', 'name' : 'Mani kanta'}
-        ]
+        { 'userid' : 'marivera', 'name' : 'Martha Rivera'},
+        { 'userid' : 'nikkwolf', 'name' : 'Nikki Wolf'},
+        { 'userid' : 'pasantos', 'name' : 'Paulo Santos'},
+        { 'userid' : 'Mani', 'name' : 'Mani kanta'}
+    ]
  
     with table.batch_writer() as batch_writer:
         for person in people:
             item = {
-                '_id'     : uuid.uuid4().hex,
-                'Userid'  : person['userid'],
+                'UserId'  : person['userid'],
                 'FullName': person['name']
             }
             print("> batch writing: {}".format(person['userid']) )
