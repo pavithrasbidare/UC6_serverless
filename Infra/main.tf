@@ -23,5 +23,5 @@ module "api_gateway" {
   source                      = "../modules/api_gateway"
   lambda_function_invoke_arn  = module.lambda.lambda_function_invoke_arn
   lambda_function_name        = module.lambda.lambda_function_name
-  region                      = var.region
+  api_gateway_cloudwatch_role_arn = module.iam.api_gateway_cloudwatch_role_arn
 }
