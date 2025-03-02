@@ -8,7 +8,12 @@ variable "lambda_function_name" {
   type        = string
 }
 
+variable "api_gateway_cloudwatch_role_arn" {
+  description = "The ARN of the IAM role for API Gateway CloudWatch logging"
+  type        = string
+}
+
 variable "region" {
-  description = "The AWS region"
+  description = "The AWS region to deploy resources"
   type        = string
 }
