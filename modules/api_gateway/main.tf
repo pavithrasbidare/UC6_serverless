@@ -44,8 +44,54 @@ resource "aws_api_gateway_deployment" "deployment" {
   rest_api_id = aws_api_gateway_rest_api.api.id
 }
 
+resource "aws_cloudwatch_log_group" "api_gw_logs" {
+  name = "/aws/api-gateway/UserAPI"
+}
+
 resource "aws_api_gateway_stage" "stage" {
   rest_api_id   = aws_api_gateway_rest_api.api.id
   stage_name    = "prod"
   deployment_id = aws_api_gateway_deployment.deployment.id
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gw_logs.arn
+    format          = jsonencode({
+      requestId       = "$context.requestId"
+      ip              = "$context.identity.sourceIp"
+      caller          = "$context.identity.caller"
+      user            = "$context.identity.user"
+      requestTime     = "$context.requestTime"
+      httpMethod      = "$context.httpMethod"
+      resourcePath    = "$context.resourcePath"
+      status          = "$context.status"
+      protocol        = "$context.protocol"
+      responseLength  = "$context.responseLength"
+    })
+  }
+}
+
+resource "aws_iam_role" "api_gateway_cloudwatch_role" {
+  name = "api_gateway_cloudwatch_role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch_attach" {
+  role       = aws_iam_role.api_gateway_cloudwatch_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+resource "aws_api_gateway_account" "account" {
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch_role.arn
 }
