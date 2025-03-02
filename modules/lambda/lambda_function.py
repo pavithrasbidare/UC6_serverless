@@ -1,7 +1,7 @@
 def lambda_handler(event, context):
     table_name = 'UserTable'
     dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table(UserTable)
+    table = dynamodb.Table(table_name)
  
     result = None
     people = [
