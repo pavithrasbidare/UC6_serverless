@@ -15,17 +15,17 @@ resource "aws_api_gateway_resource" "user_id_resource" {
   path_part   = "{userId}"
 }
 
-resource "aws_api_gateway_method" "user_method" {
+resource "aws_api_gateway_method" "user_get_method" {
   rest_api_id   = aws_api_gateway_rest_api.api.id
   resource_id   = aws_api_gateway_resource.user_id_resource.id
-  http_method   = "ANY"
+  http_method   = "GET"
   authorization = "NONE"
 }
 
-resource "aws_api_gateway_integration" "user_integration" {
+resource "aws_api_gateway_integration" "user_get_integration" {
   rest_api_id             = aws_api_gateway_rest_api.api.id
   resource_id             = aws_api_gateway_resource.user_id_resource.id
-  http_method             = aws_api_gateway_method.user_method.http_method
+  http_method             = aws_api_gateway_method.user_get_method.http_method
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = var.lambda_function_invoke_arn
@@ -40,7 +40,7 @@ resource "aws_lambda_permission" "api_gateway" {
 }
 
 resource "aws_api_gateway_deployment" "deployment" {
-  depends_on  = [aws_api_gateway_integration.user_integration]
+  depends_on  = [aws_api_gateway_integration.user_get_integration]
   rest_api_id = aws_api_gateway_rest_api.api.id
 }
 
