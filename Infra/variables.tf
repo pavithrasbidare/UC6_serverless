@@ -11,4 +11,5 @@ variable "table_name" {
 variable "function_name" {
   description = "The name of the Lambda function"
   type        = string
+  default     = "user_management_lambda"
 }
