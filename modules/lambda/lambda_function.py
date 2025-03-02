@@ -1,5 +1,5 @@
 def lambda_handler(event, context):
-    table_name = 'serverless_workshop_intro'
+    table_name = 'UserTable'
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(UserTable)
  
