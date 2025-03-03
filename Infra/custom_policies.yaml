@@ -1,0 +1,12 @@
+metadata:
+  name: "Ensure DynamoDB tables have encryption enabled"
+  id: "CKV_AWS_2"
+  category: "DynamoDB"
+  severity: "MEDIUM"
+  resource_types:
+    - "aws_dynamodb_table"
+
+definition:
+  and:
+    - server_side_encryption:
+        enabled: true
