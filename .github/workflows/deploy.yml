@@ -28,8 +28,7 @@ jobs:
       - name: Create Checkov Configuration
         run: |
           cd ./Infra
-          cat <<EOF > .checkov.yaml
-policies:
+          echo 'policies:
   - id: CKV_AWS_2
     name: "Ensure DynamoDB tables have encryption enabled"
     category: "DynamoDB"
@@ -53,8 +52,7 @@ policies:
     resource_types:
       - "aws_api_gateway_stage"
     checks:
-      - "access_log_settings.enabled == true"
-EOF
+      - "access_log_settings.enabled == true"' > .checkov.yaml
 
       - name: Run Checkov
         continue-on-error: true
@@ -77,8 +75,7 @@ EOF
         run: |
           cd ./Infra
           if [ ! -f ".tflint.hcl" ]; then
-            cat <<EOF > .tflint.hcl
-plugin "terraform" {
+            echo 'plugin "terraform" {
   enabled = true
 }
 rule "aws_dynamodb_table_tag" {
@@ -101,8 +98,7 @@ rule "aws_api_gateway_stage_logging" {
   resource_type = "aws_api_gateway_stage"
   attribute = "access_log_settings"
   condition = "notempty"
-}
-EOF
+}' > .tflint.hcl
           fi
           tflint --init
           tflint --config .tflint.hcl
