@@ -1,99 +1,24 @@
-name: Infra Provisioning through Terraform
+name: CI/CD Pipeline
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Environment to deploy (e.g., dev, staging, prod)"
-        required: true
-        default: "dev"
-        type: choice
-        options:
-        - dev
-        - staging
-        - prod
-
   push:
     branches:
       - main
   pull_request:
     branches:
       - main
-      
-permissions:
-  contents: read
-  pull-requests: write   
-  id-token: write  
 
 jobs:
-  terraform:
-    name: Terraform
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          ref: ${{ github.event.pull_request.head.ref || github.ref }} 
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.5
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: arn:aws:iam::302263075199:role/OIDC-Terraform
-          role-session-name: githubactions
-          aws-region: "us-west-2"     
-
-      - name: Install TFLint
-        run: |
-          TFLINT_VERSION="v0.55.0"
-          curl -sL "https://github.com/terraform-linters/tflint/releases/download/${TFLINT_VERSION}/tflint_linux_amd64.zip" -o tflint.zip
-          unzip tflint.zip
-          chmod +x tflint
-          sudo mv tflint /usr/local/bin/
-          rm tflint.zip
-          echo "TFLint installed successfully:"
-          tflint --version
-
-      - name: Run TFLint
-        continue-on-error: true
-        run: |
-          cd ./Infra
-          if [ ! -f ".tflint.hcl" ]; then
-            cat <<EOF > .tflint.hcl
-plugin "terraform" {
-  enabled = true
-}
-rule "aws_dynamodb_table_tag" {
-  enabled = true
-  message = "DynamoDB tables should have tags."
-  resource_type = "aws_dynamodb_table"
-  attribute = "tags"
-  condition = "notempty"
-}
-rule "aws_lambda_function_environment" {
-  enabled = true
-  message = "Lambda functions should have environment variables."
-  resource_type = "aws_lambda_function"
-  attribute = "environment"
-  condition = "notempty"
-}
-rule "aws_api_gateway_stage_logging" {
-  enabled = true
-  message = "API Gateway stages should have logging enabled."
-  resource_type = "aws_api_gateway_stage"
-  attribute = "access_log_settings"
-  condition = "notempty"
-}
-EOF
-          fi
-          tflint --init
-          tflint --config .tflint.hcl
 
       - name: Install Checkov
         run: |
@@ -136,7 +61,7 @@ EOF
         run: |
           cd ./Infra
           checkov --directory . --config-file .checkov.yaml
-          
+
       - name: Terraform Init
         run: | 
           cd ./Infra
@@ -147,6 +72,41 @@ EOF
           cd ./Infra
           terraform validate
 
+      - name: Run TFLint
+        continue-on-error: true
+        run: |
+          cd ./Infra
+          if [ ! -f ".tflint.hcl" ]; then
+            cat <<EOF > .tflint.hcl
+plugin "terraform" {
+  enabled = true
+}
+rule "aws_dynamodb_table_tag" {
+  enabled = true
+  message = "DynamoDB tables should have tags."
+  resource_type = "aws_dynamodb_table"
+  attribute = "tags"
+  condition = "notempty"
+}
+rule "aws_lambda_function_environment" {
+  enabled = true
+  message = "Lambda functions should have environment variables."
+  resource_type = "aws_lambda_function"
+  attribute = "environment"
+  condition = "notempty"
+}
+rule "aws_api_gateway_stage_logging" {
+  enabled = true
+  message = "API Gateway stages should have logging enabled."
+  resource_type = "aws_api_gateway_stage"
+  attribute = "access_log_settings"
+  condition = "notempty"
+}
+EOF
+          fi
+          tflint --init
+          tflint --config .tflint.hcl
+
       - name: Terraform Workspace Select or Create
         run: |
           cd ./Infra
@@ -156,13 +116,6 @@ EOF
         run: |
           cd ./Infra
           terraform plan -out=tfplan
-
-      - name: Checkout Repository for PR
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.ref || github.ref }} 
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure Git
         run: |
@@ -186,7 +139,7 @@ EOF
           github_token: ${{ secrets.GITHUB_TOKEN }}
           header: "Terraform Documentation 📖"
           path: "./Infra/README.md"
-    
+
       - name: Apply Terraform on Merge the PR
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: |
