@@ -1,4 +1,4 @@
-name: Deploy Terraform
+name: CI/CD Pipeline
 
 on:
   workflow_dispatch:
@@ -45,9 +45,21 @@ jobs:
           cd ./Infra
           checkov --directory . --config-file .checkov.yaml --external-checks-dir ./custom_policies
 
+      - name: Add HashiCorp GPG Key
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+
+      - name: Add HashiCorp APT Repository
+        run: |
+          sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+
+      - name: Update Package List
+        run: |
+          sudo apt-get update
+
       - name: Install Terraform
         run: |
-          sudo apt-get update && sudo apt-get install -y terraform
+          sudo apt-get install -y terraform
 
       - name: Terraform Init
         run: |
