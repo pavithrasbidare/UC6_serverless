@@ -1,0 +1,25 @@
+policies:
+  - id: CKV_AWS_2
+    name: "Ensure DynamoDB tables have encryption enabled"
+    category: "DynamoDB"
+    severity: "MEDIUM"
+    resource_types:
+      - "aws_dynamodb_table"
+    checks:
+      - "server_side_encryption.enabled == true"
+  - id: CKV_AWS_3
+    name: "Ensure Lambda functions have logging enabled"
+    category: "Lambda"
+    severity: "LOW"
+    resource_types:
+      - "aws_lambda_function"
+    checks:
+      - "logging_configuration.enabled == true"
+  - id: CKV_AWS_4
+    name: "Ensure API Gateway stages have logging enabled"
+    category: "API Gateway"
+    severity: "LOW"
+    resource_types:
+      - "aws_api_gateway_stage"
+    checks:
+      - "access_log_settings.enabled == true"
