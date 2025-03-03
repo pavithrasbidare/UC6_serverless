@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy Terraform
 
 on:
   workflow_dispatch:
@@ -43,7 +43,11 @@ jobs:
         continue-on-error: true
         run: |
           cd ./Infra
-          checkov --directory . --config-file .checkov.yaml
+          checkov --directory . --config-file .checkov.yaml --external-checks-dir ./custom_policies
+
+      - name: Install Terraform
+        run: |
+          sudo apt-get update && sudo apt-get install -y terraform
 
       - name: Terraform Init
         run: |
