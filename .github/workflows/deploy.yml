@@ -106,6 +106,7 @@ jobs:
           tflint --config .tflint.hcl
 
       # Step: Install Checkov
+      - name: Install Checkov
         run: |
           pip install checkov
           checkov --version
