@@ -1,38 +1,40 @@
-name: CI/CD Pipeline
+name: Deploy Terraform
 
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Environment to deploy (e.g., dev, staging, prod)"
+      branch:
+        description: 'Branch to deploy'
         required: true
-        default: "dev"
-        type: choice
-        options:
-          - dev
-          - staging
-          - prod
-
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+        default: 'main'
 
 permissions:
-  contents: read
-  pull-requests: write
   id-token: write
+  contents: write
+  pull-requests: write
 
 jobs:
   terraform:
-    name: Terraform
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.1.4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::302263075199:role/OIDC-Terraform
+          aws-region: us-west-2
 
       - name: Install Checkov
         run: |
@@ -45,31 +47,16 @@ jobs:
           cd ./Infra
           checkov --directory . --config-file .checkov.yaml --external-checks-dir ./custom_policies
 
-      - name: Add HashiCorp GPG Key
-        run: |
-          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-
-      - name: Add HashiCorp APT Repository
-        run: |
-          sudo apt-add-repository "deb [arch=$(dpkg --print-architecture)] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-
-      - name: Update Package List
-        run: |
-          sudo apt-get update
-
-      - name: Install Terraform
-        run: |
-          sudo apt-get install -y terraform
+      - name: List Directory Contents
+        run: ls -la ./Infra
 
       - name: Terraform Init
-        run: |
-          cd ./Infra
-          terraform init
+        run: terraform init
+        working-directory: ./Infra
 
       - name: Terraform Validate
-        run: |
-          cd ./Infra
-          terraform validate
+        run: terraform validate
+        working-directory: ./Infra
 
       - name: Run TFLint
         continue-on-error: true
@@ -84,9 +71,8 @@ jobs:
           terraform workspace select ${{ github.event.inputs.environment || 'dev' }} || terraform workspace new ${{ github.event.inputs.environment || 'dev' }}
 
       - name: Terraform Plan
-        run: |
-          cd ./Infra
-          terraform plan -out=tfplan
+        run: terraform plan -out=tfplan
+        working-directory: ./Infra
 
       - name: Configure Git
         run: |
@@ -113,7 +99,5 @@ jobs:
 
       - name: Apply Terraform on Merge the PR
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        run: |
-          cd ./Infra
-          terraform init
-          terraform apply -auto-approve
+        run: terraform apply --auto-approve
+        working-directory: ./Infra
