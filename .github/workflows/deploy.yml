@@ -100,7 +100,7 @@ jobs:
               attribute = "access_log_settings"
               condition = "notempty"
             }
-            EOF
+EOF
           fi
 
           # Install TFLint plugin (Terraform)
@@ -145,7 +145,7 @@ jobs:
                 - "aws_api_gateway_stage"
               checks:
                 - "access_log_settings.enabled == true"
-          EOF
+EOF
 
       # Step: Run Checkov Security Scan
       - name: Run Checkov
