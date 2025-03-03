@@ -133,7 +133,154 @@ EOF
           config-file: .terraform-docs.yml
 
       - name: Post README.md as PR Comment
+        if: ${{ github.name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref || github.ref }} 
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Checkov
+        run: |
+          pip install checkov
+          checkov --version
+
+      - name: Create Checkov Configuration
+        run: |
+          cd ./Infra
+          cat <<EOF > .checkov.yaml
+policies:
+  - id: CKV_AWS_2
+    name: "Ensure DynamoDB tables have encryption enabled"
+    category: "DynamoDB"
+    severity: "MEDIUM"
+    resource_types:
+      - "aws_dynamodb_table"
+    checks:
+      - "server_side_encryption.enabled == true"
+  - id: CKV_AWS_3
+    name: "Ensure Lambda functions have logging enabled"
+    category: "Lambda"
+    severity: "LOW"
+    resource_types:
+      - "aws_lambda_function"
+    checks:
+      - "logging_configuration.enabled == true"
+  - id: CKV_AWS_4
+    name: "Ensure API Gateway stages have logging enabled"
+    category: "API Gateway"
+    severity: "LOW"
+    resource_types:
+      - "aws_api_gateway_stage"
+    checks:
+      - "access_log_settings.enabled == true"
+EOF
+
+      - name: Run Checkov
+        continue-on-error: true
+        run: |
+          cd ./Infra
+          checkov --directory . --config-file .checkov.yaml
+
+      - name: Terraform Init
+        run: | 
+          cd ./Infra
+          terraform init
+
+      - name: Terraform Validate
+        run: |
+          cd ./Infra
+          terraform validate
+
+      - name: Run TFLint
+        continue-on-error: true
+        run: |
+          cd ./Infra
+          if [ ! -f ".tflint.hcl" ]; then
+            cat <<EOF > .tflint.hcl
+plugin "terraform" {
+  enabled = true
+}
+rule "aws_dynamodb_table_tag" {
+  enabled = true
+  message = "DynamoDB tables should have tags."
+  resource_type = "aws_dynamodb_table"
+  attribute = "tags"
+  condition = "notempty"
+}
+rule "aws_lambda_function_environment" {
+  enabled = true
+  message = "Lambda functions should have environment variables."
+  resource_type = "aws_lambda_function"
+  attribute = "environment"
+  condition = "notempty"
+}
+rule "aws_api_gateway_stage_logging" {
+  enabled = true
+  message = "API Gateway stages should have logging enabled."
+  resource_type = "aws_api_gateway_stage"
+  attribute = "access_log_settings"
+  condition = "notempty"
+}
+EOF
+          fi
+          tflint --init
+          tflint --config .tflint.hcl
+
+      - name: Terraform Workspace Select or Create
+        run: |
+          cd ./Infra
+          terraform workspace select ${{ github.event.inputs.environment || 'dev' }} || terraform workspace new ${{ github.event.inputs.environment || 'dev' }}
+
+      - name: Terraform Plan
+        run: |
+          cd ./Infra
+          terraform plan -out=tfplan
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Generate Markdown with Terraform Docs
         if: ${{ github.event_name == 'pull_request' }}
+        uses: terraform-docs/gh-actions@v1.3.0
+        with:
+          working-dir: ./Infra
+          output-file: README.md
+          output-method: inject
+          git-push: true
+          config-file: .terraform-docs.yml
+
+      - name: Post README.md as PR Comment
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: marocchino/sticky-pull-request-comment@v2.9.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          header: "Terraform Documentation 📖"
+          path: "./Infra/README.md"
+
+      - name: Apply Terraform on Merge the PR
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: |
+          cd ./Infra
+          terraform init
+          terraform apply -auto-approveevent_name == 'pull_request' }}
         uses: marocchino/sticky-pull-request-comment@v2.9.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
