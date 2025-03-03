@@ -29,6 +29,7 @@ jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -37,35 +38,6 @@ jobs:
         run: |
           pip install checkov
           checkov --version
-
-      - name: Create Checkov Configuration
-        run: |
-          cd ./Infra
-          echo "policies:
-  - id: CKV_AWS_2
-    name: 'Ensure DynamoDB tables have encryption enabled'
-    category: 'DynamoDB'
-    severity: 'MEDIUM'
-    resource_types:
-      - 'aws_dynamodb_table'
-    checks:
-      - 'server_side_encryption.enabled == true'
-  - id: CKV_AWS_3
-    name: 'Ensure Lambda functions have logging enabled'
-    category: 'Lambda'
-    severity: 'LOW'
-    resource_types:
-      - 'aws_lambda_function'
-    checks:
-      - 'logging_configuration.enabled == true'
-  - id: CKV_AWS_4
-    name: 'Ensure API Gateway stages have logging enabled'
-    category: 'API Gateway'
-    severity: 'LOW'
-    resource_types:
-      - 'aws_api_gateway_stage'
-    checks:
-      - 'access_log_settings.enabled == true'" > .checkov.yaml
 
       - name: Run Checkov
         continue-on-error: true
@@ -87,32 +59,6 @@ jobs:
         continue-on-error: true
         run: |
           cd ./Infra
-          if [ ! -f ".tflint.hcl" ]; then
-            echo "plugin 'terraform' {
-  enabled = true
-}
-rule 'aws_dynamodb_table_tag' {
-  enabled = true
-  message = 'DynamoDB tables should have tags.'
-  resource_type = 'aws_dynamodb_table'
-  attribute = 'tags'
-  condition = 'notempty'
-}
-rule 'aws_lambda_function_environment' {
-  enabled = true
-  message = 'Lambda functions should have environment variables.'
-  resource_type = 'aws_lambda_function'
-  attribute = 'environment'
-  condition = 'notempty'
-}
-rule 'aws_api_gateway_stage_logging' {
-  enabled = true
-  message = 'API Gateway stages should have logging enabled.'
-  resource_type = 'aws_api_gateway_stage'
-  attribute = 'access_log_settings'
-  condition = 'notempty'
-}" > .tflint.hcl
-          fi
           tflint --init
           tflint --config .tflint.hcl
 
