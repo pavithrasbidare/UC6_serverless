@@ -45,10 +45,6 @@ jobs:
           cd ./Infra
           checkov --directory . --config-file .checkov.yaml
 
-      - name: Install Terraform
-        run: |
-          sudo apt-get update && sudo apt-get install -y terraform
-
       - name: Terraform Init
         run: |
           cd ./Infra
