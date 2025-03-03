@@ -32,6 +32,10 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # Step: Set up Terraform
       - name: Set up Terraform
@@ -68,7 +72,7 @@ jobs:
       - name: Run TFLint
         continue-on-error: true
         run: |
-          cd Infra/Environments/${{ github.event.inputs.environment || 'dev' }}
+          cd ./Infra
           # Ensure .tflint.hcl exists
           if [ ! -f ".tflint.hcl" ]; then
             cat <<EOF > .tflint.hcl
@@ -115,7 +119,7 @@ jobs:
       - name: Run Checkov
         continue-on-error: true
         run: |
-          cd Infra/Environments/${{ github.event.inputs.environment || 'dev' }}
+          cd ./Infra
           cat <<EOF > .checkov.yaml
           policies:
             - id: CKV_AWS_2
@@ -148,25 +152,25 @@ jobs:
       # Step: Terraform Init
       - name: Terraform Init
         run: | 
-          cd Infra/Environments/${{ github.event.inputs.environment || 'dev' }}
+          cd ./Infra
           terraform init
 
       # Step: Run Terraform Validate (validate configuration files)
       - name: Terraform Validate
         run: |
-          cd Infra/Environments/${{ github.event.inputs.environment || 'dev' }}
+          cd ./Infra
           terraform validate
 
       # Step: Terraform Workspace Select
       - name: Terraform Workspace Select
         run: |
-          cd Infra/Environments/${{ github.event.inputs.environment || 'dev' }}
+          cd ./Infra
           terraform workspace select ${{ github.event.inputs.environment || 'dev' }} || terraform workspace new ${{ github.event.inputs.environment || 'dev' }}
 
       # Step: Terraform Plan
       - name: Terraform Plan
         run: |
-          cd Infra/Environments/${{ github.event.inputs.environment || 'dev' }} 
+          cd ./Infra
           terraform plan -out=tfplan
 
       # Step: Checkout Repository for PR
@@ -175,7 +179,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }} 
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # Step: Configure Git for committing generated README.md
       - name: Configure Git
@@ -188,7 +192,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         uses: terraform-docs/gh-actions@v1.3.0
         with:
-          working-dir: Infra/Environments/${{ github.event.inputs.environment || 'dev' }}
+          working-dir: ./Infra
           output-file: README.md
           output-method: inject
           git-push: true
@@ -201,12 +205,12 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           header: "Terraform Documentation 📖"
-          path: "Infra/Environments/${{ github.event.inputs.environment || 'dev' }}/README.md"
+          path: "./Infra/README.md"
     
       # Step: Apply Terraform if PR is merged
       - name: Apply Terraform on Merge the PR
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: |
-          cd Infra/Environments/${{ github.event.inputs.environment || 'dev' }}
+          cd ./Infra
           terraform init
           terraform apply -auto-approve
