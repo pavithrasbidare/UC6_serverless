@@ -115,9 +115,8 @@ jobs:
           pip install checkov
           checkov --version
 
-      # Step: Run Checkov Security Scan
-      - name: Run Checkov
-        continue-on-error: true
+      # Step: Create Checkov Configuration
+      - name: Create Checkov Configuration
         run: |
           cd ./Infra
           cat <<EOF > .checkov.yaml
@@ -147,6 +146,12 @@ jobs:
               checks:
                 - "access_log_settings.enabled == true"
           EOF
+
+      # Step: Run Checkov Security Scan
+      - name: Run Checkov
+        continue-on-error: true
+        run: |
+          cd ./Infra
           checkov --directory . --config-file .checkov.yaml
           
       # Step: Terraform Init
@@ -161,8 +166,8 @@ jobs:
           cd ./Infra
           terraform validate
 
-      # Step: Terraform Workspace Select
-      - name: Terraform Workspace Select
+      # Step: Terraform Workspace Select or Create
+      - name: Terraform Workspace Select or Create
         run: |
           cd ./Infra
           terraform workspace select ${{ github.event.inputs.environment || 'dev' }} || terraform workspace new ${{ github.event.inputs.environment || 'dev' }}
